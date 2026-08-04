@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Test / coverage artifacts
+coverage/
+.nyc_output/
+cypress/screenshots/
+cypress/videos/
+
+# Env files (never commit secrets; .env.example is tracked)
+.env
+.env.*
+!.env.example
+
+# Editor / OS
+.DS_Store
+*.log
+.vscode/*.local
