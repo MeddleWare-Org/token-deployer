@@ -1,0 +1,130 @@
+// Minimal Walrus client for icon uploads. Mirrors the canonical helpers in
+// `assets/walrus` (uploadImageBytes / createBlobUploadFlow / walrusBlobUrl) but is
+// self-contained so it resolves cleanly in the app's Vite build.
+//
+// Icons are stored as RAW blobs (not quilts) so `GET /v1/blobs/<blobId>` returns
+// the exact image bytes — directly renderable by wallets/explorers. An upload
+// relay is REQUIRED (direct-to-storage-node writes fail from browsers). Verified
+// end-to-end on testnet (scripts/walrus-upload verification).
+
+import { SuiGrpcClient } from '@mysten/sui/grpc'
+import { walrus, blobIdFromInt } from '@mysten/walrus'
+import type { SuiJsonRpcClient } from '@mysten/sui/jsonRpc'
+import { WALRUS_RELAY_HOSTS, WALRUS_MAX_TIP_MIST } from '../config.js'
+
+export { ICON_EPOCHS } from './walrus-constants.js'
+
+export type WalrusNetwork = 'testnet' | 'mainnet'
+
+const RPC_URLS: Record<WalrusNetwork, string> = {
+  testnet: 'https://fullnode.testnet.sui.io:443',
+  mainnet: 'https://fullnode.mainnet.sui.io:443',
+}
+
+const AGGREGATOR_HOSTS: Record<WalrusNetwork, string> = {
+  testnet: 'https://aggregator.walrus-testnet.walrus.space',
+  mainnet: 'https://aggregator.walrus-mainnet.walrus.space',
+}
+
+/** Public URL that serves the raw blob bytes. */
+export function walrusBlobUrl(network: WalrusNetwork, blobId: string): string {
+  return `${AGGREGATOR_HOSTS[network]}/v1/blobs/${blobId}`
+}
+
+/** Options for {@link createWalrusClient}. */
+export interface CreateWalrusClientOptions {
+  /** Browser WASM URL (Vite `?url` import). */
+  wasmUrl?: string
+  /**
+   * Upload relay host. Defaults to the configured operator/public relay for the
+   * network ({@link WALRUS_RELAY_HOSTS}); pass a value to honour a user-supplied URL.
+   */
+  uploadRelayHost?: string
+  /**
+   * Maximum tip (MIST) the client will pay. Defaults to {@link WALRUS_MAX_TIP_MIST}.
+   * The SDK throws if the relay's tip exceeds this, so keep it above the relay tip.
+   */
+  uploadRelayMaxTipMist?: bigint
+}
+
+/**
+ * A Walrus-extended gRPC client configured with an upload relay + tip guard.
+ *
+ * The relay's tip address/amount is fetched by the SDK from the relay's
+ * `/v1/tip-config`; only the `max` (client-side ceiling) is set here. The
+ * default relay is the operator relay when `VITE_WALRUS_RELAY_*` is set,
+ * otherwise the public Mysten relay (which earns the operator nothing).
+ */
+export function createWalrusClient(
+  network: WalrusNetwork,
+  wasmUrlOrOptions?: string | CreateWalrusClientOptions,
+) {
+  // Back-compat: a bare string is treated as the WASM URL.
+  const opts: CreateWalrusClientOptions =
+    typeof wasmUrlOrOptions === 'string' ? { wasmUrl: wasmUrlOrOptions } : (wasmUrlOrOptions ?? {})
+  const host = opts.uploadRelayHost ?? WALRUS_RELAY_HOSTS[network]
+  const maxTip = opts.uploadRelayMaxTipMist ?? WALRUS_MAX_TIP_MIST
+  return new SuiGrpcClient({ network, baseUrl: RPC_URLS[network] }).$extend(
+    walrus({
+      ...(opts.wasmUrl ? { wasmUrl: opts.wasmUrl } : {}),
+      uploadRelay: {
+        host,
+        sendTip: { max: Number(maxTip) },
+      },
+    }),
+  )
+}
+
+/** Raw-blob write flow: encode -> register(tx) -> upload -> certify(tx) -> getBlob. */
+export function createBlobUploadFlow(
+  client: ReturnType<typeof createWalrusClient>,
+  bytes: Uint8Array,
+) {
+  return client.walrus.writeBlobFlow({ blob: bytes })
+}
+
+/** A Walrus blob object owned by a Sui address. */
+export interface OwnedBlob {
+  objectId: string
+  /** Aggregator-URL-compatible blob ID string. */
+  blobId: string
+  size: number
+  endEpoch: number
+  certified: boolean
+}
+
+/**
+ * Return all Walrus blobs owned by `owner`. Uses `getBlobType()` for dynamic
+ * package resolution so no hardcoded addresses are needed.
+ */
+export async function fetchOwnedWalrusBlobs(
+  suiClient: SuiJsonRpcClient,
+  walrusClient: ReturnType<typeof createWalrusClient>,
+  owner: string,
+): Promise<OwnedBlob[]> {
+  const blobType = await walrusClient.walrus.getBlobType()
+  const { data } = await suiClient.getOwnedObjects({
+    owner,
+    filter: { StructType: blobType },
+    options: { showContent: true },
+  })
+  const blobs: OwnedBlob[] = []
+  for (const item of data) {
+    if (!item.data) continue
+    const fields = (item.data.content as { fields?: Record<string, unknown> } | undefined)?.fields
+    if (!fields) continue
+    const storage = fields.storage as { fields?: { end_epoch?: unknown } } | undefined
+    try {
+      blobs.push({
+        objectId: item.data.objectId,
+        blobId: blobIdFromInt(BigInt(fields.blob_id as string)),
+        size: Number(fields.size),
+        endEpoch: Number(storage?.fields?.end_epoch ?? 0),
+        certified: fields.certified_epoch !== null && fields.certified_epoch !== undefined,
+      })
+    } catch {
+      // Skip blobs whose fields cannot be parsed.
+    }
+  }
+  return blobs
+}

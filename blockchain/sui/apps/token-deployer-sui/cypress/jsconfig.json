@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "target": "es2025",
+    "lib": ["es2025", "dom"],
+    "types": ["cypress"]
+  },
+  "include": ["./e2e/**/*", "./support/**/*"],
+  "exclude": ["./support/component.*"]
+}

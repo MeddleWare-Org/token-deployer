@@ -1,0 +1,8 @@
+{
+  "servers": {
+		"sui-knowledge-docs": {
+			"type": "http",
+			"url": "https://sui.mcp.kapa.ai"
+		}
+  }
+}
