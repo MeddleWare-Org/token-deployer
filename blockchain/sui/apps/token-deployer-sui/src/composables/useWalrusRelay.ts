@@ -69,7 +69,7 @@ export function useWalrusRelay(network: WalrusNetwork) {
 
     if (isOperatorRelayConfigured && operatorRelayAccessible.value) {
       relays.push({
-        label: 'Operator relay (supports your vault)',
+        label: 'Operator relay (supports this app)',
         host: operatorRelayHost,
         tip: operatorRelayTip.value,
         isPublic: false,

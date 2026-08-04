@@ -7,7 +7,13 @@ set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_DIR="$HERE/.."
-T="$APP_DIR/../../blockchain/sui/sui-token-template"
+# Canonical template = the published @meddleware/sui-token-template package
+# (resolved from node_modules); override with SUI_TOKEN_TEMPLATE_DIR for a local checkout.
+T="${SUI_TOKEN_TEMPLATE_DIR:-$(cd "$APP_DIR" && node -e "process.stdout.write(require('path').dirname(require.resolve('@meddleware/sui-token-template/package.json')))" 2>/dev/null || true)}"
+if [[ -z "${T:-}" || ! -f "$T/Move.toml" ]]; then
+  echo "ERROR: sui-token-template sources not found. Install @meddleware/sui-token-template or set SUI_TOKEN_TEMPLATE_DIR to a local checkout." >&2
+  exit 1
+fi
 OUT="$APP_DIR/src/template-src/files.json"
 mkdir -p "$APP_DIR/src/template-src"
 

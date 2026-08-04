@@ -1,11 +1,12 @@
-# CLAUDE.md — `apps/token-deployer`
+# CLAUDE.md — `token-deployer-sui`
 
-`@meddleware/token-deployer` is the first occupant of `apps/`: a Vue 3 + Vite
-browser app that lets any user deploy their own Sui coin fully client-side (their
-wallet signs + pays gas + a trivial fee to the operator treasury) and download a
-`mwsui_token`-shaped source package. It is the browser equivalent of
-`blockchain/sui/sui-token-template`. See the root `CLAUDE.md` for monorepo context
-and [README.md](README.md) for the user/operator guide.
+`@meddleware/token-deployer` is a Vue 3 + Vite browser app that lets any user deploy
+their own Sui coin fully client-side (their wallet signs + pays gas + a trivial fee to
+the operator treasury) and download a matching source package. It is the browser
+equivalent of the `@meddleware/sui-token-template` Move package (from which it derives
+its pre-compiled bytecode and source templates). See the repo-root
+[CLAUDE.md](../../../../CLAUDE.md) for context and [README.md](README.md) for the
+user/operator guide.
 
 ## Architecture (the money/parity paths matter most)
 
@@ -71,7 +72,7 @@ the relay source `crates/walrus-upload-relay`.)
   that on-chain tip (amount checked against the *actual received body length*, bound
   by nonce/size) **before** the expensive storage-node fan-out. Stripping or lowering
   the tip → the relay rejects the upload; no operator cost. This refutes an earlier
-  vault-iteration finding that the tip "could be removed" — it is enforced now.
+  finding that the tip "could be removed" — it is enforced now.
 - **The relay does no on-chain tx** (README L27) → the operator never pays gas.
   Storage (WAL) is paid by the **user** at registration; read/serve bandwidth is the
   separate public **aggregator**. The tip only needs to cover the relay's

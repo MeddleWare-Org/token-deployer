@@ -1,8 +1,8 @@
 # Security Review — `token-deployer-sui`
 
 **Classification:** Internal focused review (TypeScript / Vue browser app; first pass)
-**Product:** `@meddleware/token-deployer` (`apps/sui/token-deployer-sui`) — a **separate product** from the
-mwSUI vault (see `SYNTHESIS-apps.md`). Standalone-app corpus, not part of the vault campaign.
+**Product:** `@meddleware/token-deployer` (`blockchain/sui/apps/token-deployer-sui`) — a standalone,
+self-contained browser app.
 **Scope:** `src/lib/*` (validation 162, generatePackage 211, template 131, buildPublishTx 162, deploy 136,
 github 146, licenses 122, walrus 83, walrus-constants 15, form 75, types 66), `src/composables/*`
 (useWallet 133, useSuiClient 20, useWalrusRelay 133), `src/config.ts` (137), `src/main.ts`,
@@ -23,12 +23,12 @@ own Sui coin: it patches one pre-compiled Move template in the browser, builds a
 user's wallet signs and pays for, splits a trivial fee to the operator treasury, and hands back a
 byte-identical downloadable source package (optionally pushed to the user's own GitHub). **The critical
 scoping fact that bounds every finding: the app takes no custody of keys or funds, holds no on-chain
-capability, and touches no vault accounting.** The only value it moves is the per-deploy operator fee,
+capability, and touches no external accounting.** The only value it moves is the per-deploy operator fee,
 and that is split from the user's own gas coin inside the signed PTB — it cannot be redirected at runtime.
 Consequently the **maximum realistic severity is Low**: the worst outcomes are operator fee-revenue loss
 (guarded), a malformed/injectable *generated* source package (guarded by three independent layers), a
-supply-chain compromise of the pinned SDKs, or a user's GitHub PAT leaking (guarded) — none can move vault
-or third-party funds.
+supply-chain compromise of the pinned SDKs, or a user's GitHub PAT leaking (guarded) — none can move the
+operator's or a third party's funds.
 
 The review surfaces **no Critical/High/Medium issues.** The package is notably well-built: injection
 safety is layered (form → `assertSafeConfig` → `patchVecConstant`), fee integrity is enforced both in the
@@ -67,7 +67,7 @@ previously unverifiable by the mocked test suite; the Phase-0 `e2e-deploy.mjs` h
 | **Positive** | Design decision notably well-executed |
 
 Severity is bounded by the trust scope: **client-side, non-custodial coin deployment.** The app holds no
-key, no fund, and no on-chain capability; nothing in it can affect the mwSUI vault or any third party.
+key, no fund, and no on-chain capability; nothing in it can affect the operator or any third party.
 
 ---
 
@@ -84,7 +84,7 @@ wasm (trusted upstream); the Walrus protocol, relay, and aggregator (covered for
 `blockchain/sui/sui-token-template` (the parity source — cross-referenced, not re-audited); the retained
 `token-deployer-sui-old` / `token-deployer-envs` iterations.
 
-**Environment:** `cd apps/sui/token-deployer-sui`; `npm run type-check` + `npm run lint` +
+**Environment:** `cd blockchain/sui/apps/token-deployer-sui`; `npm run type-check` + `npm run lint` +
 `npm test` (Vitest, **67 pass / 8 skip**) + `npm run test:e2e` (Cypress, mocked) are the automatic gates;
 `npm run e2e:localnet` (real localnet publish) is the manual real-chain proof.
 
@@ -116,7 +116,7 @@ either post-publish or serve public data.
 ^0.19.9`, `@mysten/bcs ^2.1.0`, and `@mysten/move-bytecode-template ^0.4.0` (caret). These SDKs run in the
 same process that holds the user's wallet session and build the bytecode/PTB, so a compromised minor
 release would sit on the deploy path. **Impact is bounded** — the signer is the user's own wallet, not a
-vault capability, and a **`package-lock.json` is committed**, so `npm ci` resolves deterministically.
+privileged on-chain capability, and a **`package-lock.json` is committed**, so `npm ci` resolves deterministically.
 **Status: MITIGATED (Low).** **Recommendation:** narrow the three caret pins to tilde/exact and run
 `npm ci` (not `npm install`) in the Cloudflare Pages build.
 

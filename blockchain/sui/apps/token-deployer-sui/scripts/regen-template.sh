@@ -10,7 +10,14 @@ set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_DIR="$HERE/.."
-TEMPLATE_DIR="$APP_DIR/../../../blockchain/sui/sui-token-template"
+# The canonical template ships as the published @meddleware/sui-token-template
+# package; resolve it from node_modules. A local checkout can be pointed at via
+# SUI_TOKEN_TEMPLATE_DIR (e.g. during template co-development before publish).
+TEMPLATE_DIR="${SUI_TOKEN_TEMPLATE_DIR:-$(cd "$APP_DIR" && node -e "process.stdout.write(require('path').dirname(require.resolve('@meddleware/sui-token-template/package.json')))" 2>/dev/null || true)}"
+if [[ -z "${TEMPLATE_DIR:-}" || ! -f "$TEMPLATE_DIR/Move.toml" ]]; then
+  echo "ERROR: sui-token-template sources not found. Install @meddleware/sui-token-template or set SUI_TOKEN_TEMPLATE_DIR to a local checkout." >&2
+  exit 1
+fi
 
 echo "Building $TEMPLATE_DIR (testnet build-env)…"
 ( cd "$TEMPLATE_DIR" && rm -rf build && sui move build --build-env testnet >/dev/null )

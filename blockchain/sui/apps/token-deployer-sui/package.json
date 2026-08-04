@@ -27,7 +27,6 @@
     "verify:template": "node scripts/verify-bytecode.mjs && vitest run tests/templateArtifact.test.ts tests/templateParity.test.ts"
   },
   "dependencies": {
-    "@meddleware/vault-assets-walrus": "file:../../../assets/walrus",
     "@mysten/bcs": "^2.1.0",
     "@mysten/move-bytecode-template": "^0.4.0",
     "@mysten/sui": "~2.17.0",
@@ -54,6 +53,9 @@
     "vite-plugin-vue-devtools": "^8.1.5",
     "vitest": "^4.1.10",
     "vue-tsc": "~3.3.0"
+  },
+  "optionalDependencies": {
+    "@meddleware/sui-token-template": "^1.0.0"
   },
   "engines": {
     "node": "^22.18.0 || >=24.12.0"

@@ -1,6 +1,9 @@
-// Minimal Walrus client for icon uploads. Mirrors the canonical helpers in
-// `assets/walrus` (uploadImageBytes / createBlobUploadFlow / walrusBlobUrl) but is
-// self-contained so it resolves cleanly in the app's Vite build.
+// Minimal Walrus client for icon uploads. Mirrors the canonical helpers in the
+// `@meddleware/sui-walrus` package (createWalrusClient / createBlobUploadFlow /
+// walrusBlobUrl / fetchOwnedWalrusBlobs) but is kept self-contained here so it
+// resolves cleanly in the app's Vite build and preserves the lazy-load boundary
+// around `@mysten/walrus`. Once `@meddleware/sui-walrus` is published this file
+// should be replaced by imports from it (injecting the app's relay host + max tip).
 //
 // Icons are stored as RAW blobs (not quilts) so `GET /v1/blobs/<blobId>` returns
 // the exact image bytes — directly renderable by wallets/explorers. An upload

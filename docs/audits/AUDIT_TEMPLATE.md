@@ -23,7 +23,7 @@ One row per documented invariant the package is responsible for. The goal is to 
 
 | # | Invariant (plain statement) | Enforced / asserted at (`file:fn`) | Proven by (test / code-assert / cross-pkg) | Status |
 | --- | --- | --- | --- | --- |
-| I1 | [e.g. `vault_idle + position` conserved across allocate/deallocate] | `sources/x.move::allocate` | `tests/x_tests.move::test_conserve` | HOLDS / GAP |
+| I1 | [e.g. `total_in == total_out` conserved across a mutating call] | `sources/x.move::fn` (or `src/x.ts`) | `tests/x_tests::test_conserve` | HOLDS / GAP |
 
 Status values: **HOLDS** (enforced + proven), **HOLDS (code-only)** (enforced, no direct test),
 **GAP** (documented but not enforced/proven — must produce a finding), **N/A**.
@@ -34,15 +34,15 @@ Status values: **HOLDS** (enforced + proven), **HOLDS (code-only)** (enforced, n
 
 ### B.1 External dependency risk
 
-One row per external on-chain dependency reachable from this package (git-pinned Move deps and
-protocol shared objects). Purely internal vault deps are omitted.
+One row per external dependency reachable from this package (git-pinned Move deps and protocol shared
+objects, or pinned npm dependencies for a TypeScript package). Purely internal deps are omitted.
 
 | Dependency | Pinned rev / object ID | Env | Liveness dependency? | External audit status | Notes |
 | --- | --- | --- | --- | --- | --- |
 | [e.g. `stork`] | `ebc28e2…` | mainnet+testnet | rebalance price feed | [known audit / none at review date] | [read-only / fee-coin / etc.] |
 
-"Liveness dependency?" — state precisely which vault path halts if the dependency is unavailable
-(e.g. "rebalance only", "deallocate redemption only", "none — read is optional confirmation").
+"Liveness dependency?" — state precisely which code path halts if the dependency is unavailable
+(e.g. "publish only", "icon upload only", "none — read is optional confirmation").
 
 ### B.2 Upgrade-authority & capability catalog
 
